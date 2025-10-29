@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: etl_postgres
+    env_file: .env
+    ports:
+      - "55432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  prefect:
+    image: prefecthq/prefect:3-latest
+    container_name: etl_prefect
+    ports:
+      - "4200:4200"
+    command: prefect server start --host 0.0.0.0 --port 4200
+
+  scraper:
+    build: ./scraper
+    depends_on:
+      - postgres
+    environment:
+      - DB_HOST=postgres
+      - DB_NAME=etl_db
+      - DB_USER=etl_user
+      - DB_PASS=etl_pass
+
+  aggregator:
+    build: ./aggregator
+    depends_on:
+      - postgres
+    environment:
+      - DB_HOST=postgres
+      - DB_NAME=etl_db
+      - DB_USER=etl_user
+      - DB_PASS=etl_pass
+
+  analyzer:
+    build: ./analyzer
+    depends_on:
+      - postgres
+    environment:
+      - DB_HOST=postgres
+      - DB_NAME=etl_db
+      - DB_USER=etl_user
+      - DB_PASS=etl_pass
+
+volumes:
+  pgdata:

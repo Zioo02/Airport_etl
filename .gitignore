@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.env
+*.venv
+.env/
+.venv/
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data outputs
+data/
+*.parquet
+*.csv
+*.xlsx
+
+# Docker
+*.pid
+*.tar
+*.img
+
+# Prefect and logs
+logs/
+__prefect__
+.prefect/
