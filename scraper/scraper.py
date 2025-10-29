@@ -188,15 +188,18 @@ def save_to_postgres(df: pd.DataFrame):
         logger.warning("No data to save.")
         return
 
-    db_user = os.getenv("DB_USER", "etl_user")
-    db_pass = os.getenv("DB_PASS", "etl_pass")
-    db_host = os.getenv("DB_HOST", "localhost")
-    db_name = os.getenv("DB_NAME", "etl_db")
+    # prefer DB_* vars, fallback to POSTGRES_* for compatibility with postgres image .env
+    db_user = os.getenv("DB_USER") or os.getenv("POSTGRES_USER") or "etl_user"
+    db_pass = os.getenv("DB_PASS") or os.getenv("POSTGRES_PASSWORD") or "etl_pass"
+    db_host = os.getenv("DB_HOST") or os.getenv("POSTGRES_HOST") or "postgres"
+    db_port = os.getenv("DB_PORT") or os.getenv("POSTGRES_PORT") or "5432"
+    db_name = os.getenv("DB_NAME") or os.getenv("POSTGRES_DB") or "etl_db"
 
-    conn_str = f"postgresql+psycopg2://{db_user}:{db_pass}@{db_host}:55432/{db_name}"
-    engine = create_engine(conn_str)
+    conn_str = f"postgresql+psycopg2://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+    logger.info("Connecting to DB at %s:%s as %s", db_host, db_port, db_user)
 
     try:
+        engine = create_engine(conn_str)
         with engine.begin() as conn:
             df.to_sql("flights_raw", conn, if_exists="append", index=False)
         logger.info("Saved %d records to flights_raw", len(df))

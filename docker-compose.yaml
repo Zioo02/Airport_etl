@@ -6,10 +6,10 @@ services:
     container_name: etl_postgres
     env_file: .env
     ports:
-      - "55432:5432"
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-
+  
   prefect:
     image: prefecthq/prefect:3-latest
     container_name: etl_prefect
@@ -21,31 +21,29 @@ services:
     build: ./scraper
     depends_on:
       - postgres
+    env_file: .env
     environment:
+      # nadpisanie tylko tego, co musi być inne wewnątrz kontenera
       - DB_HOST=postgres
-      - DB_NAME=etl_db
-      - DB_USER=etl_user
-      - DB_PASS=etl_pass
+      - DB_PORT=5432
 
   aggregator:
     build: ./aggregator
     depends_on:
       - postgres
+    env_file: .env
     environment:
       - DB_HOST=postgres
-      - DB_NAME=etl_db
-      - DB_USER=etl_user
-      - DB_PASS=etl_pass
+      - DB_PORT=5432
 
   analyzer:
     build: ./analyzer
     depends_on:
       - postgres
+    env_file: .env
     environment:
       - DB_HOST=postgres
-      - DB_NAME=etl_db
-      - DB_USER=etl_user
-      - DB_PASS=etl_pass
+      - DB_PORT=5432
 
 volumes:
   pgdata:
