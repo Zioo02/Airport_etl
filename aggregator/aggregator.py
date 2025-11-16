@@ -21,7 +21,7 @@ def load_data():
         st.error(f"Błąd ładowania danych: {e}")
         return None, None, None
 
-st.title("✈️ Dashboard Lotniska (Projekt ETL)")
+st.title("Dashboard Lotniska (Projekt ETL)")
 
 df_dest, df_airline, df_hourly = load_data()
 
