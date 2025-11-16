@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 def _make_driver():
     """Create a Chrome webdriver with basic anti-bot / stealth tweaks."""
     opts = Options()
-    # run headless by default, allow override: set CHROME_HEADLESS=false to run headful
     headless = os.getenv("CHROME_HEADLESS", "true").lower() != "false"
     if headless:
         opts.add_argument("--headless=new")
@@ -33,10 +32,8 @@ def _make_driver():
     opts.add_argument("--disable-extensions")
     opts.add_argument("--disable-infobars")
     opts.add_argument("--disable-blink-features=AutomationControlled")
-    # user agent
     ua = os.getenv("CHROME_USER_AGENT")
     if not ua:
-        # small list, change or provide via env
         ua = random.choice([
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.4 Safari/605.1.15",
@@ -44,11 +41,9 @@ def _make_driver():
         ])
     opts.add_argument(f"user-agent={ua}")
 
-    # reduce automation flags
     opts.add_experimental_option("excludeSwitches", ["enable-automation"])
     opts.add_experimental_option("useAutomationExtension", False)
 
-    # allow custom chrome binary/path
     chromedriver_path = os.getenv("CHROME_DRIVER_PATH")
     chrome_bin = os.getenv("CHROME_BIN")
     if chrome_bin:
@@ -59,7 +54,6 @@ def _make_driver():
     driver.set_page_load_timeout(60)
 
     try:
-        # inject stealth scripts early for each new document
         driver.execute_cdp_cmd(
             "Page.addScriptToEvaluateOnNewDocument",
             {"source": """
@@ -69,10 +63,8 @@ Object.defineProperty(navigator, 'plugins', {get: () => [1,2,3,4,5]});
 window.chrome = window.chrome || { runtime: {} };
 """}
         )
-        # Also set user agent in CDP (helps on some sites)
         driver.execute_cdp_cmd("Network.setUserAgentOverride", {"userAgent": ua})
     except Exception:
-        # if CDP not available, continue — not fatal
         pass
 
     return driver
@@ -87,13 +79,11 @@ def fetch_chopin_departures_selenium():
 
         wait = WebDriverWait(driver, 25)
         try:
-            # wait for either table or the load-more button
             wait.until(
                 lambda d: d.find_elements(By.CSS_SELECTOR, "table.flightboard.departures") or
                           d.find_elements(By.CSS_SELECTOR, "button.btn_big.departures_more, button.departures_more")
             )
         except TimeoutException:
-            # save debug HTML if needed, then return current source
             try:
                 path = os.path.join(os.path.dirname(__file__), "debug_page.html")
                 with open(path, "w", encoding="utf-8") as fh:
@@ -111,8 +101,6 @@ def fetch_chopin_departures_selenium():
             else:
                 no_change_rounds = 0
             prev = len(rows)
-
-            # stop if no change after couple tries
             if no_change_rounds >= 2:
                 break
 
@@ -122,22 +110,17 @@ def fetch_chopin_departures_selenium():
             btn = btns[0]
 
             try:
-                # scroll, small human-like pause, click via JS
                 driver.execute_script("arguments[0].scrollIntoView({block:'center'});", btn)
                 time.sleep(random.uniform(0.3, 0.9))
                 driver.execute_script("arguments[0].click();", btn)
-                # wait a bit for new rows to appear
                 try:
                     WebDriverWait(driver, 8).until(
                         lambda d: len(d.find_elements(By.CSS_SELECTOR, "table.flightboard.departures tr")) > prev
                     )
                 except TimeoutException:
-                    # short extra wait then continue loop
                     time.sleep(random.uniform(0.5, 1.2))
             except WebDriverException:
                 break
-
-        # final short wait for JS to settle
         time.sleep(0.5)
         return driver.page_source
     finally:
@@ -176,7 +159,6 @@ def parse_departures(html: str) -> pd.DataFrame:
 
 
 def _ensure_table(conn):
-    # create table with composite primary key to prevent duplicates at DB level
     conn.execute(text("""
     CREATE TABLE IF NOT EXISTS flights_raw (
       airport TEXT NOT NULL,
@@ -223,22 +205,17 @@ def save_to_postgres(df: pd.DataFrame):
             ON CONFLICT (airport, flight_number, data_timesch) DO NOTHING
         """)
         for r in df.to_dict(orient="records"):
-            # normalize None/NaN
             for k, v in r.items():
                 if pd.isna(v):
                     r[k] = None
-
-            # convert scheduled_time (format YYYYMMDDHHMMSS) to timezone-aware datetime if present
             st = r.get("scheduled_time")
             if st:
                 try:
                     parsed = datetime.strptime(st, "%Y%m%d%H%M%S")
                     r["scheduled_time"] = parsed.replace(tzinfo=ZoneInfo("Europe/Warsaw"))
                 except Exception:
-                    # leave as None or original if parsing fails
                     r["scheduled_time"] = None
 
-            # pass mapping as single param to SQLAlchemy 2.x
             conn.execute(insert, r)
     logger.info("Insert attempted for %d records", len(df))
 

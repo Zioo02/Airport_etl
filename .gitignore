@@ -1,4 +1,3 @@
-# Python
 __pycache__/
 *.pyc
 *.pyo
@@ -9,26 +8,21 @@ __pycache__/
 .venv/
 *.log
 
-# IDE
 .vscode/
 .idea/
 
-# OS
 .DS_Store
 Thumbs.db
 
-# Data outputs
 data/
 *.parquet
 *.csv
 *.xlsx
 
-# Docker
 *.pid
 *.tar
 *.img
 
-# Prefect and logs
 logs/
 __prefect__
 .prefect/

@@ -1,5 +1,5 @@
 FROM python:3.10-slim
 WORKDIR /app
-COPY . /app
-RUN pip install pandas psycopg2-binary boto3
+RUN pip install pandas sqlalchemy psycopg2-binary
+COPY analyzer.py .
 CMD ["python", "analyzer.py"]
